@@ -139,7 +139,7 @@ void generate_chair(Room &r, Vec loc, float theta, float size, float rad) {
 }
 
 void generate_obstacles(Room &r, decltype(default_random_engine()) &eng) {
-	generate_chair(r, { 1.3f, 1.3f }, 0.1f, 0.4f, 0.03f);
+	//generate_chair(r, { 1.3f, 1.3f }, 0.1f, 0.4f, 0.03f);
 }
 
 Room generate_room(decltype(default_random_engine()) &eng) {
@@ -209,14 +209,14 @@ int main()
 	SDL_Texture *map_text = SDL_CreateTextureFromSurface(ren, map);
 
 	bool running = true;
-	/*auto start = chrono::high_resolution_clock::now();
+	auto start = chrono::high_resolution_clock::now();
 	for (int i = 0; i < 3600*100; ++i) {// Run for one hour; 3600 seconds * 100 ticks per second
 		simulate(bot, r);
 		draw_on_map(map_render, bot);
 	}
 	auto end = chrono::high_resolution_clock::now();
 	chrono::duration<double, milli> time = end - start;
-	cout << "Iterations per second: " << 3600*100*1000/time.count() << endl;*/
+	cout << "Iterations per second: " << 3600*100*1000/time.count() << endl;
 	while (running) {
 		/*for (int i = 0; i < 20; ++i) {
 			simulate(bot, r);
@@ -229,7 +229,6 @@ int main()
 		SDL_RenderCopy(ren, map_text, NULL, NULL);
 		draw_room(ren,r);
 		draw_robot(ren,bot);
-		//draw_circle(ren, { 0,0 }, 50, 0xFFFFFFFF);
 		SDL_RenderPresent(ren);
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
@@ -237,8 +236,20 @@ int main()
 				if (e.key.keysym.sym == SDLK_ESCAPE) {
 					running = false;
 				}
-				else {
+				else if (e.key.keysym.sym == SDLK_SPACE) {
+					SDL_SetRenderDrawColor(map_render, 0, 0, 0, 0);
+					SDL_RenderClear(map_render);
 					r = generate_room(eng);
+					bot.loc = { 0.2f,0.2f };
+					bot.theta = 20.0f / 180 * PI;
+					auto start = chrono::high_resolution_clock::now();
+					for (int i = 0; i < 3600 * 100; ++i) {// Run for one hour; 3600 seconds * 100 ticks per second
+						simulate(bot, r);
+						draw_on_map(map_render, bot);
+					}
+					auto end = chrono::high_resolution_clock::now();
+					chrono::duration<double, milli> time = end - start;
+					cout << "Iterations per second: " << 3600 * 100 * 1000 / time.count() << endl;
 				}
 			}
 			if (e.type == SDL_QUIT) {
