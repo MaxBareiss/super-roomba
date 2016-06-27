@@ -9,7 +9,8 @@ public:
 	enum State {
 		GOING_FORWARD,
 		BACKING_UP,
-		ROTATING_AWAY
+		ROTATING_AWAY,
+		LONG_BACKUP
 	} state;
 	RoombaCommand operator()(SensorState s);
 private:

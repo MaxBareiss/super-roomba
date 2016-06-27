@@ -15,3 +15,4 @@ Vec operator* (float lhs, Vec rhs);
 void simulate(Roomba &roomba, Room room);
 float dist_Point_to_Ray(Vec P, Ray R);
 float raycast_to_Segment(Ray R, Segment S2);
+Vec rotate(Vec vec, float theta);

@@ -261,9 +261,17 @@ void simulate(Roomba &roomba,const Room room) {
 		ss.left = false;
 		ss.right = false;
 		ss.center = false;
-	}
+	}
 
-	auto		command = roomba(ss);
+
+	auto command = roomba(ss);
 	apply_command(roomba,command);
-	cout << ss.wall_left << " " << ss.wall_right << endl;
+
+	// Collision detection
+	centerDist = dist_point_to_room(roomba.loc, room);
+	if (centerDist.dist < roomba.r) {
+		roomba.loc = roomba.loc - (centerDist.pt - roomba.loc)*(roomba.r - centerDist.dist);
+	}
+
+	//cout << ss.wall_left << " " << ss.wall_right << endl;
 }
