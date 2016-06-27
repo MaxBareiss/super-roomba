@@ -211,7 +211,7 @@ void apply_command(Roomba &rmba, const RoombaCommand c) {
 	// Do the differential drive stuff
 	// Wheels are 0.15 from the center
 	const float l = 0.15f;
-	const float dt = 0.01f;
+	const float dt = 0.01f; // 10ms tick
 	float omega = (c.v_r - c.v_l) / l;
 	float R = l / 2 * (c.v_l + c.v_r) / (c.v_r - c.v_l);
 	Vec ICC = { rmba.loc.x - R*sin(rmba.theta),rmba.loc.y + R*cos(rmba.theta) };

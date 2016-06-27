@@ -3,6 +3,8 @@
 
 #include "simulator.h"
 #include <iostream>
+#include <chrono>
+#include <random>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
 #undef main
@@ -72,14 +74,90 @@ void draw_on_map(SDL_Renderer* ren, Roomba r) {
 	filledPolygonRGBA(ren, x.data(), y.data(), 4, 128, 128, 255, 10);
 }
 
+void add_sub_room(Room &r, int start, int end, decltype(default_random_engine()) &eng) {
+	float max_width = dist(r.corners[start],r.corners[end]);
+	Vec par = (r.corners[end] - r.corners[start]) / max_width;
+	Vec perp = rotate(par,-PI/2);
+	float width = uniform_real_distribution<float>(0.18f, max_width*0.5f)(eng);
+	float location = uniform_real_distribution<float>(0.0f, max_width-width)(eng);
+	float depth = uniform_real_distribution<float>(0.18f, width)(eng);
+	Vec p1 = r.corners[start] + par*location;
+	r.corners.insert(r.corners.begin() + start + 1, p1);
+	Vec p2 = p1 + perp*depth;
+	r.corners.insert(r.corners.begin() + start + 2, p2);
+	Vec p3 = p2 + par*width;
+	r.corners.insert(r.corners.begin() + start + 3, p3);
+	Vec p4 = p3 - perp*depth;
+	r.corners.insert(r.corners.begin() + start + 4, p4);
+}
+
+void generate_space(Room &r, const Vec max_size, decltype(default_random_engine()) &eng) {
+	auto prob = uniform_real_distribution<float>(0.0f, 1.0f);
+	Vec space_size = { uniform_real_distribution<float>(2.0f,max_size.x)(eng), uniform_real_distribution<float>(2.0f,max_size.y)(eng) };
+	for (int i = 0; i < 3; ++i) {// Four walls, three corners, first corner is always pre-existing
+		
+		Vec direction;
+		switch (i) {
+		case 0:
+			direction = { space_size.x,0 };
+			break;
+		case 1:
+			direction = { 0,space_size.y };
+			break;
+		case 2:
+			direction = { -space_size.x,0 };
+		}
+		r.corners.push_back(r.corners.back() + direction);
+	}
+	// Add sub-rooms
+	for (int i = 0; i < r.corners.size(); ++i) {
+		if (prob(eng) < 0.4) {
+			add_sub_room(r, i, (i + 1) % r.corners.size(),eng);
+			i += 4;
+		}
+	}
+}
+
+void generate_walls(Room &r, decltype(default_random_engine()) &eng) {
+	Vec max_size = { 3.0f,3.0f };
+	r.corners.push_back({ 0,0 });
+	generate_space(r, max_size, eng);
+}
+
+void generate_chair(Room &r, Vec loc, float theta, float size, float rad) {
+	vector<Vec> pts;
+	pts.resize(4);
+	pts[0] = { 0,0 };
+	pts[1] = { size,0 };
+	pts[2] = { size, size };
+	pts[3] = { 0,size };
+	for (auto pt : pts) {
+		Vec res = rotate(pt, theta);
+		res = res + loc;
+		r.obstacles.push_back({ res,rad });
+	}
+}
+
+void generate_obstacles(Room &r, decltype(default_random_engine()) &eng) {
+	generate_chair(r, { 1.3f, 1.3f }, 0.1f, 0.4f, 0.03f);
+}
+
+Room generate_room(decltype(default_random_engine()) &eng) {
+	Room r;
+	generate_walls(r,eng);
+	generate_obstacles(r,eng);
+	return r;
+}
+
 int main()
 {
-	Room r;
-	r.corners.push_back({ 0,0 });
+	auto eng = default_random_engine();
+	Room r = generate_room(eng);
+	/*r.corners.push_back({ 0,0 });
 	r.corners.push_back({ 2.0f,0 });
 
-	r.corners.push_back({ 2.0f,1.0f });
-	r.corners.push_back({ 2.5f,1.0f });
+	r.corners.push_back({ 2.0f,0.75f });
+	r.corners.push_back({ 2.5f,0.75f });
 	r.corners.push_back({ 2.5f,1.5f });
 	r.corners.push_back({ 2.0f,1.5f });
 
@@ -93,7 +171,10 @@ int main()
 	r.corners.push_back({ 0.25f,2.0f });
 
 	r.corners.push_back({ 0,2.0f });
-	r.obstacles.push_back({ {1.6f,1.6f}, 0.03f });
+	r.obstacles.push_back({ { 1.3f,1.3f }, 0.03f });
+	r.obstacles.push_back({ { 1.3f,1.7f }, 0.03f });
+	r.obstacles.push_back({ { 1.7f,1.7f }, 0.03f });
+	r.obstacles.push_back({ { 1.7f,1.3f }, 0.03f });*/
 	Roomba bot;
 	bot.loc = { 0.2f,0.2f };
 	bot.theta = 20.0f/180*PI;
@@ -128,14 +209,19 @@ int main()
 	SDL_Texture *map_text = SDL_CreateTextureFromSurface(ren, map);
 
 	bool running = true;
-	/*for (int i = 0; i < 50000; ++i) {
+	/*auto start = chrono::high_resolution_clock::now();
+	for (int i = 0; i < 3600*100; ++i) {// Run for one hour; 3600 seconds * 100 ticks per second
 		simulate(bot, r);
-	}*/
+		draw_on_map(map_render, bot);
+	}
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> time = end - start;
+	cout << "Iterations per second: " << 3600*100*1000/time.count() << endl;*/
 	while (running) {
-		for (int i = 0; i < 20; ++i) {
+		/*for (int i = 0; i < 20; ++i) {
 			simulate(bot, r);
 			draw_on_map(map_render, bot);
-		}
+		}*/
 		SDL_SetRenderDrawColor(ren, 0, 0, 0, 0);
 		SDL_RenderClear(ren);
 		SDL_DestroyTexture(map_text);
@@ -147,8 +233,13 @@ int main()
 		SDL_RenderPresent(ren);
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
-			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
-				running = false;
+			if (e.type == SDL_KEYDOWN) {
+				if (e.key.keysym.sym == SDLK_ESCAPE) {
+					running = false;
+				}
+				else {
+					r = generate_room(eng);
+				}
 			}
 			if (e.type == SDL_QUIT) {
 				running = false;

@@ -14,10 +14,10 @@ RoombaCommand Roomba::operator()(SensorState s)
 		if (s.center || s.left || s.right) {
 			if (count > 100) {
 				state = BACKING_UP;
-				cout << count << endl;
+				//cout << count << endl;
 				count = 0;
 			}else{
-				cout << count << endl;
+				//cout << count << endl;
 				state = LONG_BACKUP;
 				count = 0;
 			}
@@ -26,7 +26,7 @@ RoombaCommand Roomba::operator()(SensorState s)
 	case Roomba::LONG_BACKUP:
 		//cout << "LONG_BACKUP! " << count << endl;
 		if (count > 400 + uniform_int_distribution<int>(1, 100)(default_random_engine())) {
-			cout << count << endl;
+			//cout << count << endl;
 			state = ROTATING_AWAY;
 			count = 0;
 			rotLeft = true;
@@ -52,7 +52,7 @@ RoombaCommand Roomba::operator()(SensorState s)
 		break;
 	}
 	if (oldState != state) {
-		cout << "OLDSTATE: " << int(oldState) << " NEW STATE: " << state << endl;
+		//cout << "OLDSTATE: " << int(oldState) << " NEW STATE: " << state << endl;
 	}
 	switch (state)
 	{

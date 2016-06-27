@@ -18,6 +18,9 @@ struct Vec {
 	Vec operator* (float rhs) {
 		return{ x*rhs,y*rhs };
 	}
+	Vec operator/ (float rhs) {
+		return{ x/rhs,y/rhs };
+	}
 };
 
 struct Obstacle {
