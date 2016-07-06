@@ -51,3 +51,4 @@ struct Ray {
 	Vec point;
 	float theta;
 };
+

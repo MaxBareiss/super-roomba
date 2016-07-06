@@ -1,6 +1,5 @@
 //#include "stdafx.h"
 #include "simulator.h"
-#include "clipper.hpp"
 #include <iostream>
 
 using namespace std;
@@ -47,6 +46,11 @@ inline float dist(Vec a, Vec b) {
 
 inline float perp(Vec u, Vec v) {
 	return u.x*v.y - u.y*v.x;
+}
+
+template<typename T>
+inline T min(T a, T b) {
+	return a < b ? a : b;
 }
 
 // intersect2D_2Segments(): find the 2D intersection of 2 finite segments
@@ -215,19 +219,17 @@ void apply_command(Roomba &rmba, const RoombaCommand c) {
 	float omega = (c.v_r - c.v_l) / l;
 	float R = l / 2 * (c.v_l + c.v_r) / (c.v_r - c.v_l);
 	Vec ICC = { rmba.loc.x - R*sin(rmba.theta),rmba.loc.y + R*cos(rmba.theta) };
-	Roomba res(rmba);
+	float x = rmba.loc.x;
+	float y = rmba.loc.y;
 	// Equation 5, expanded out
 	if (omega != 0) {
-		res.loc.x = cos(omega*dt)*(rmba.loc.x - ICC.x) - sin(omega*dt)*(rmba.loc.y - ICC.y) + ICC.x;
-		res.loc.y = sin(omega*dt)*(rmba.loc.x - ICC.x) + cos(omega*dt)*(rmba.loc.y - ICC.y) + ICC.y;
+		rmba.loc.x = cos(omega*dt)*(x - ICC.x) - sin(omega*dt)*(y - ICC.y) + ICC.x;
+		rmba.loc.y = sin(omega*dt)*(x - ICC.x) + cos(omega*dt)*(y - ICC.y) + ICC.y;
 	} else {
-		res.loc.x = rmba.loc.x + cos(rmba.theta)*c.v_r*dt;
-		res.loc.y = rmba.loc.y + sin(rmba.theta)*c.v_r*dt;
+		rmba.loc.x = x + cos(rmba.theta)*c.v_r*dt;
+		rmba.loc.y = y + sin(rmba.theta)*c.v_r*dt;
 	}
-
-	res.theta = rmba.theta + omega*dt;
-	rmba.loc = res.loc;
-	rmba.theta = res.theta;
+	rmba.theta += omega*dt;
 }
 
 void simulate(Roomba &roomba,const Room room) {

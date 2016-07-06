@@ -2,6 +2,7 @@
 //
 
 #include "simulator.h"
+#include "SimpleRoomba.h"
 #include <iostream>
 #include <chrono>
 #include <random>
@@ -46,13 +47,13 @@ void draw_room(SDL_Renderer *ren, Room r) {
 	}
 }
 
-void draw_robot(SDL_Renderer *ren, Roomba r) {
+void draw_robot(SDL_Renderer *ren, Roomba &r) {
 	draw_circle(ren, r.loc * SCALE_FACTOR + Vec{100, -100}, r.r * SCALE_FACTOR,0x00FF00FF);
 	aalineRGBA(ren, r.loc.x * SCALE_FACTOR+100, 100 + 800 - r.loc.y * SCALE_FACTOR,
 		                    100+(r.loc.x+cos(r.theta)*r.r) * SCALE_FACTOR, 100 + 800 - (r.loc.y + sin(r.theta)*r.r) * SCALE_FACTOR,128,255,128,255);
 }
 
-void draw_on_map(SDL_Renderer* ren, Roomba r) {
+void draw_on_map(SDL_Renderer* ren, Roomba &r) {
 	vector<Sint16> x, y;
 	x.resize(4);
 	y.resize(4);
@@ -175,7 +176,7 @@ int main()
 	r.obstacles.push_back({ { 1.3f,1.7f }, 0.03f });
 	r.obstacles.push_back({ { 1.7f,1.7f }, 0.03f });
 	r.obstacles.push_back({ { 1.7f,1.3f }, 0.03f });*/
-	Roomba bot;
+	SimpleRoomba bot;
 	bot.loc = { 0.2f,0.2f };
 	bot.theta = 20.0f/180*PI;
 

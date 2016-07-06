@@ -15,27 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="targetver.h">
+    <ClInclude Include="Roomba.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="clipper.hpp">
+    <ClInclude Include="simulator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleRoomba.h">
+    <ClInclude Include="Types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Super Roomba.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="clipper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SimpleRoomba.cpp">
+    <ClCompile Include="simulator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

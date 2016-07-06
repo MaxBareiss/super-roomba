@@ -1,16 +1,16 @@
-#include "Roomba.h"
+#include "SimpleRoomba.h"
 #include <random>
 #include <iostream>
 
 using namespace std;
 
-RoombaCommand Roomba::operator()(SensorState s)
+RoombaCommand SimpleRoomba::operator()(SensorState s)
 {
 	RoombaCommand cmd;
 	auto oldState = state;
 	switch (state)
 	{
-	case Roomba::GOING_FORWARD:
+	case SimpleRoomba::GOING_FORWARD:
 		if (s.center || s.left || s.right) {
 			if (count > 100) {
 				state = BACKING_UP;
@@ -23,7 +23,7 @@ RoombaCommand Roomba::operator()(SensorState s)
 			}
 		}
 		break;
-	case Roomba::LONG_BACKUP:
+	case SimpleRoomba::LONG_BACKUP:
 		//cout << "LONG_BACKUP! " << count << endl;
 		if (count > 400 + uniform_int_distribution<int>(1, 100)(default_random_engine())) {
 			//cout << count << endl;
@@ -32,7 +32,7 @@ RoombaCommand Roomba::operator()(SensorState s)
 			rotLeft = true;
 		}
 		break;
-	case Roomba::BACKING_UP:
+	case SimpleRoomba::BACKING_UP:
 		if (count > 50 + uniform_int_distribution<int>(1,100)(default_random_engine())) {
 			state = ROTATING_AWAY;
 			//rotLeft = s.wall_left < s.wall_right;
@@ -40,7 +40,7 @@ RoombaCommand Roomba::operator()(SensorState s)
 			count = 0;
 		}
 		break;
-	case Roomba::ROTATING_AWAY:
+	case SimpleRoomba::ROTATING_AWAY:
 		if (count > 50 + uniform_int_distribution<int>(1, 20)(default_random_engine())) {
 			state = GOING_FORWARD;
 			count = 0;
@@ -56,20 +56,20 @@ RoombaCommand Roomba::operator()(SensorState s)
 	}
 	switch (state)
 	{
-	case Roomba::GOING_FORWARD:
+	case SimpleRoomba::GOING_FORWARD:
 		if (s.wall_left > 0.25 && s.wall_right > 0.25) {
 			cmd = { 0.3f, 0.3f };
 		} else {
 			cmd = { 0.1f, 0.1f };
 		}
 		break;
-	case Roomba::BACKING_UP:
+	case SimpleRoomba::BACKING_UP:
 		cmd = { -0.1f,-0.1f };
 		break;
-	case Roomba::LONG_BACKUP:
+	case SimpleRoomba::LONG_BACKUP:
 		cmd = { -0.1f,-0.1f };
 		break;
-	case Roomba::ROTATING_AWAY:
+	case SimpleRoomba::ROTATING_AWAY:
 		if (rotLeft) {
 			cmd = { 0.1f,-0.1f };
 		} else {
