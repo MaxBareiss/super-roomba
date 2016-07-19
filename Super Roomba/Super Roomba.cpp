@@ -2,8 +2,9 @@
 //
 
 #include "simulator.h"
-#include "SimpleRoomba.h"
+#include "QRoomba.h"
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <random>
 #include <SDL2/SDL.h>
@@ -150,6 +151,24 @@ Room generate_room(decltype(default_random_engine()) &eng) {
 	return r;
 }
 
+inline long int generate_reward(SDL_Surface *map) {
+	SDL_LockSurface(map);
+	long unsigned int accum = 0;
+	/*for (int x = 0; x < map->w; ++x) {
+		for (int y = 0; y < map->h; ++y) {*/
+	for (uint32_t x = 0; x < map->w*map->h; ++x){
+			//accum += ((uint32_t*)map->pixels)[x] & 0x01000000;
+			if (((uint32_t*)map->pixels)[x] != 0) {
+				accum += 1;
+			}
+	}
+	SDL_UnlockSurface(map);
+	//cout << accum << endl;
+	return accum;
+}
+
+
+
 int main()
 {
 	auto eng = default_random_engine();
@@ -176,7 +195,7 @@ int main()
 	r.obstacles.push_back({ { 1.3f,1.7f }, 0.03f });
 	r.obstacles.push_back({ { 1.7f,1.7f }, 0.03f });
 	r.obstacles.push_back({ { 1.7f,1.3f }, 0.03f });*/
-	SimpleRoomba bot;
+	QRoomba bot;
 	bot.loc = { 0.2f,0.2f };
 	bot.theta = 20.0f/180*PI;
 
@@ -201,6 +220,7 @@ int main()
 	}
 
 	SDL_Surface *map = SDL_CreateRGBSurface(0, 1000, 1000, 32, 0, 0, 0, 0);
+	SDL_Surface *map_old = SDL_CreateRGBSurface(0, 1000, 1000, 32, 0, 0, 0, 0);
 
 	SDL_Renderer *map_render = SDL_CreateSoftwareRenderer(map);
 
@@ -210,7 +230,7 @@ int main()
 	SDL_Texture *map_text = SDL_CreateTextureFromSurface(ren, map);
 
 	bool running = true;
-	auto start = chrono::high_resolution_clock::now();
+	/*auto start = chrono::high_resolution_clock::now();
 	for (int i = 0; i < 3600*100; ++i) {// Run for one hour; 3600 seconds * 100 ticks per second
 		simulate(bot, r);
 		draw_on_map(map_render, bot);
@@ -218,11 +238,39 @@ int main()
 	auto end = chrono::high_resolution_clock::now();
 	chrono::duration<double, milli> time = end - start;
 	cout << "Iterations per second: " << 3600*100*1000/time.count() << endl;
+	*/
+
+	long int old_accum;
+	SensorState ss = senseWorld(bot, r);
+
+	long int i = 0;
+	int epoch = 0;
+
+	fstream log("output.log",fstream::out | fstream::app);
+
 	while (running) {
-		/*for (int i = 0; i < 20; ++i) {
-			simulate(bot, r);
+		auto start = chrono::high_resolution_clock::now();
+		while (chrono::duration<double,milli>(chrono::high_resolution_clock::now() - start).count() < 200){ // Run for 200ms
+			RoombaCommand command = bot.takeAction(ss);
+			apply_command(bot, command);
 			draw_on_map(map_render, bot);
-		}*/
+			long int reward = generate_reward(map);
+			ss = senseWorld(bot, r);
+			bot.learnFromResults(ss, reward);
+			applyPhysics(bot, r);
+			++i;
+		}
+		cout << i << endl;
+		if (i > 300 * 100) {// 1 epoch is five minutes, simulated
+			log << epoch++ << "," << generate_reward(map) << endl;
+			SDL_SetRenderDrawColor(map_render, 0, 0, 0, 0);
+			SDL_RenderClear(map_render);
+			r = generate_room(eng);
+			bot.loc = { 0.2f,0.2f };
+			bot.theta = 20.0f / 180 * PI;
+			bot.epsilon = bot.epsilon > 0.1 ? bot.epsilon - 0.01 : 0.1;
+			i = 0;
+		}
 		SDL_SetRenderDrawColor(ren, 0, 0, 0, 0);
 		SDL_RenderClear(ren);
 		SDL_DestroyTexture(map_text);
@@ -238,7 +286,7 @@ int main()
 					running = false;
 				}
 				else if (e.key.keysym.sym == SDLK_SPACE) {
-					SDL_SetRenderDrawColor(map_render, 0, 0, 0, 0);
+					/*SDL_SetRenderDrawColor(map_render, 0, 0, 0, 0);
 					SDL_RenderClear(map_render);
 					r = generate_room(eng);
 					bot.loc = { 0.2f,0.2f };
@@ -250,14 +298,14 @@ int main()
 					}
 					auto end = chrono::high_resolution_clock::now();
 					chrono::duration<double, milli> time = end - start;
-					cout << "Iterations per second: " << 3600 * 100 * 1000 / time.count() << endl;
+					cout << "Iterations per second: " << 3600 * 100 * 1000 / time.count() << endl;*/
 				}
 			}
 			if (e.type == SDL_QUIT) {
 				running = false;
 			}
 		}
-		SDL_Delay(16);
+		SDL_Delay(1);
 	}
 	SDL_FreeSurface(map);
 	SDL_DestroyTexture(map_text);

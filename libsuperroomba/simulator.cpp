@@ -210,6 +210,23 @@ DistResult dist_point_to_room(Vec loc, Room room) {
 	}
 	return{ closest,pt };
 }
+
+vector<DistResult> dist_points_to_room(Vec loc, Room room) {
+	float closest = 99999999999999.0f;
+	vector<DistResult> res;
+	Vec pt = { 0,0 };
+	for (Obstacle obs : room.obstacles) {
+		float dis = dist(obs.loc, loc) - obs.r;
+		res.push_back({ dis,obs.loc });
+	}
+	for (int i = 0; i < room.corners.size(); ++i) {
+		Segment s = { room.corners[i],room.corners[(i + 1) % room.corners.size()] };
+		res.push_back(dist_Point_to_Segment(loc, s));
+		
+	}
+	return res;
+}
+
 // https://chess.eecs.berkeley.edu/eecs149/documentation/differentialDrive.pdf
 void apply_command(Roomba &rmba, const RoombaCommand c) {
 	// Do the differential drive stuff
@@ -232,48 +249,57 @@ void apply_command(Roomba &rmba, const RoombaCommand c) {
 	rmba.theta += omega*dt;
 }
 
-void simulate(Roomba &roomba,const Room room) {
+SensorState senseWorld(Roomba &roomba, const Room room) {
 	SensorState ss;
 	// The wall sensors point 20 degrees away from the roomba and are
 	// located at [0.1,+-0.1] when the roomba is pointed to the right
 	// (theta=0).
 	Vec left_ray_pt = rotate({ 0.1f,0.1f }, roomba.theta) + roomba.loc;
 	Ray left_ray = { left_ray_pt,roomba.theta + 20.0f / 180 * PI };
-	ss.wall_left = raycast(room,left_ray);
+	ss.wall_left = raycast(room, left_ray);
 	Vec right_ray_pt = rotate({ 0.1f,-0.1f }, roomba.theta) + roomba.loc;
 	Ray right_ray = { right_ray_pt,roomba.theta - 20.0f / 180 * PI };
 	ss.wall_right = raycast(room, right_ray);
 	DistResult centerDist = dist_point_to_room(roomba.loc, room);
 	if (centerDist.dist < roomba.r) {
 		float angle = atan2(centerDist.pt.y - roomba.loc.y, centerDist.pt.x - roomba.loc.x) - roomba.theta;
-		if (angle < -60.0f / 180 * PI && angle > -90.0f / 180*PI) {
+		if (angle < -60.0f / 180 * PI && angle > -90.0f / 180 * PI) {
 			ss.right = true;
 			ss.left = false;
 			ss.center = false;
-		}else if (angle > 60.0f / 180 * PI && angle < 90.0f / 180 * PI){
+		}
+		else if (angle > 60.0f / 180 * PI && angle < 90.0f / 180 * PI) {
 			ss.left = true;
 			ss.right = false;
 			ss.center = false;
-		}else if (angle > -90.0f/180*PI && angle < 90.0f /180*PI) {
+		}
+		else if (angle > -90.0f / 180 * PI && angle < 90.0f / 180 * PI) {
 			ss.center = true;
 			ss.right = false;
 			ss.left = false;
 		}
-	} else {
+	}
+	else {
 		ss.left = false;
 		ss.right = false;
 		ss.center = false;
 	}
+	return ss;
+}
 
+void applyPhysics(Roomba &roomba, const Room room) {
+	vector<DistResult> centerDist = dist_points_to_room(roomba.loc, room);
+	for (auto dr : centerDist) {
+		// Collision detection
+		if (dr.dist < roomba.r) {
+			roomba.loc = roomba.loc - (dr.pt - roomba.loc)*(roomba.r - dr.dist);
+		}
+	}
+}
 
+void simulate(Roomba &roomba,const Room room) {
+	SensorState ss = senseWorld(roomba, room);
 	auto command = roomba(ss);
 	apply_command(roomba,command);
-
-	// Collision detection
-	centerDist = dist_point_to_room(roomba.loc, room);
-	if (centerDist.dist < roomba.r) {
-		roomba.loc = roomba.loc - (centerDist.pt - roomba.loc)*(roomba.r - centerDist.dist);
-	}
-
-	//cout << ss.wall_left << " " << ss.wall_right << endl;
+	applyPhysics(roomba, room);
 }

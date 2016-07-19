@@ -27,6 +27,9 @@
     <ClInclude Include="SimpleRoomba.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="QRoomba.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Super Roomba.cpp">
@@ -36,6 +39,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SimpleRoomba.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="QRoomba.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

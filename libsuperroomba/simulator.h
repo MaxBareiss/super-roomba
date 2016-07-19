@@ -23,3 +23,6 @@ LIBSUPERROOMBA_API float dist_Point_to_Ray(Vec P, Ray R);
 LIBSUPERROOMBA_API float raycast_to_Segment(Ray R, Segment S2);
 LIBSUPERROOMBA_API Vec rotate(Vec vec, float theta);
 LIBSUPERROOMBA_API inline float dist(Vec a, Vec b);
+LIBSUPERROOMBA_API SensorState senseWorld(Roomba &roomba, const Room room);
+LIBSUPERROOMBA_API void applyPhysics(Roomba &roomba, const Room room);
+LIBSUPERROOMBA_API void apply_command(Roomba &rmba, const RoombaCommand c);
