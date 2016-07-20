@@ -21,8 +21,29 @@ vector<float> packageData(SensorState s) {
 	return out;
 }
 
-tiny_cnn::vec_t QRoomba::getQs(SensorState s) {
-	tiny_cnn::vec_t res = net.predict(packageData(s));
+tiny_cnn::vec_t QRoomba::generateInput(SensorState ss, bool hypothetical) {
+	tiny_cnn::vec_t res;
+	res.reserve(8 * HISTORY);
+	if (history.size() < HISTORY) {
+		history.resize(HISTORY, packageData({ false,false,false,9999,9999 }));
+	}
+	if (!hypothetical) {
+		history.push_front(packageData(ss));
+		if (history.size() > HISTORY) {
+			history.pop_back();
+		}
+	}
+	for (int i = 0; i < HISTORY; ++i) {
+		auto s = hypothetical ? (i == 0 ? packageData(ss) : history[i-1]) : history[i];
+		for (int j = 0; j < 8; ++j) {
+			res.push_back(s[j]);
+		}
+	}
+	return res;
+}
+
+tiny_cnn::vec_t QRoomba::getQs(SensorState s, bool hypothetical) {
+	tiny_cnn::vec_t res = net.predict(generateInput(s,hypothetical));
 	return res;
 }
 
@@ -56,17 +77,16 @@ int argmax(tiny_cnn::vec_t vec) {
 void QRoomba::learn(SensorState state, tiny_cnn::vec_t Qs) {
 	using namespace tiny_cnn;
 	using namespace tiny_cnn::activation;
-	vec_t vecState;
-	vector<float> packed = packageData(state);
-	vecState.resize(packed.size());
+	vec_t packed = generateInput(state,true);
+	/*vecState.resize(packed.size());
 	for (int i = 0; i < packed.size(); ++i) {
 		vecState[i] = packed[i];
-	}
-	net.fit<mse>(adagrad(), vector<vec_t>{ vecState }, vector<vec_t>{ Qs }, 1, 1);
+	}*/
+	net.fit<mse>(adagrad(), vector<vec_t>{ packed }, vector<vec_t>{ Qs }, 1, 1);
 }
 
 RoombaCommand QRoomba::takeAction(SensorState ss) {
-	Qs = getQs(ss);
+	Qs = getQs(ss,false);
 	action = 0;
 	if (uniform_real_distribution<float>(0, 1)(eng) < epsilon) {
 		action = uniform_int_distribution<int>(0, 3)(eng);
@@ -78,7 +98,7 @@ RoombaCommand QRoomba::takeAction(SensorState ss) {
 }
 
 void QRoomba::learnFromResults(SensorState ss, long int reward) {
-	int maxQ = argmax(getQs(ss));
+	int maxQ = argmax(getQs(ss,true));
 	Qs[action] = reward + (gamma*maxQ);
 	learn(ss, Qs);
 }
@@ -87,5 +107,5 @@ QRoomba::QRoomba() {
 	using namespace tiny_cnn;
 	using namespace tiny_cnn::activation;
 
-	net = make_mlp<tan_h>({ 8,20,100,20,4 });
+	net = make_mlp<tan_h>({ 8*HISTORY,200,125,25,4 });
 }

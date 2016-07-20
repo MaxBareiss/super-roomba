@@ -287,7 +287,7 @@ SensorState senseWorld(Roomba &roomba, const Room room) {
 	return ss;
 }
 
-void applyPhysics(Roomba &roomba, const Room room) {
+void apply_physics(Roomba &roomba, const Room room) {
 	vector<DistResult> centerDist = dist_points_to_room(roomba.loc, room);
 	for (auto dr : centerDist) {
 		// Collision detection
@@ -301,5 +301,5 @@ void simulate(Roomba &roomba,const Room room) {
 	SensorState ss = senseWorld(roomba, room);
 	auto command = roomba(ss);
 	apply_command(roomba,command);
-	applyPhysics(roomba, room);
+	apply_physics(roomba, room);
 }

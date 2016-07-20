@@ -15,6 +15,8 @@ using namespace std;
 
 #define SCALE_FACTOR 200
 
+#define MAP_SCALE_FACTOR 100
+
 void draw_circle(SDL_Renderer *ren, Vec center, float radius, Uint32 color) {
 	/*const int POINTS = 32;
 	SDL_Point pts[POINTS+1];
@@ -58,18 +60,18 @@ void draw_on_map(SDL_Renderer* ren, Roomba &r) {
 	vector<Sint16> x, y;
 	x.resize(4);
 	y.resize(4);
-	x[0] = int(-0.05f * SCALE_FACTOR);
-	y[0] = int( 0.09f * SCALE_FACTOR);
+	x[0] = int(-0.05f * MAP_SCALE_FACTOR);
+	y[0] = int( 0.09f * MAP_SCALE_FACTOR);
 	x[1] = 0;
-	y[1] = int( 0.09f * SCALE_FACTOR);
+	y[1] = int( 0.09f * MAP_SCALE_FACTOR);
 	x[2] = 0;
-	y[2] = int(-0.09f * SCALE_FACTOR);
-	x[3] = int(-0.05f * SCALE_FACTOR);
-	y[3] = int(-0.09f * SCALE_FACTOR);
+	y[2] = int(-0.09f * MAP_SCALE_FACTOR);
+	x[3] = int(-0.05f * MAP_SCALE_FACTOR);
+	y[3] = int(-0.09f * MAP_SCALE_FACTOR);
 	for (int i = 0; i < 4; ++i) {
 		Vec res = rotate({ (float)x[i],(float)y[i] }, r.theta);
-		x[i] = int(res.x)+int(r.loc.x*SCALE_FACTOR)+100;
-		y[i] = 900-(int(res.y) + int(r.loc.y * SCALE_FACTOR));
+		x[i] = int(res.x)+int(r.loc.x*MAP_SCALE_FACTOR)+100*MAP_SCALE_FACTOR/SCALE_FACTOR;
+		y[i] = 900 * MAP_SCALE_FACTOR / SCALE_FACTOR -(int(res.y) + int(r.loc.y * MAP_SCALE_FACTOR));
 	}
 	//SDL_SetRenderDrawColor(ren, 128, 128, 255, 10);
 
@@ -204,7 +206,7 @@ int main()
 		return 1;
 	}
 	
-	SDL_Window *win = SDL_CreateWindow("Super Roomba", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1000, 1000, SDL_WINDOW_SHOWN);
+	SDL_Window *win = SDL_CreateWindow("Super Roomba", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 5*SCALE_FACTOR, 5*SCALE_FACTOR, SDL_WINDOW_SHOWN);
 	if (win == nullptr) {
 		cout << "ERROR!!" << endl;
 		SDL_Quit();
@@ -219,8 +221,9 @@ int main()
 		return 3;
 	}
 
-	SDL_Surface *map = SDL_CreateRGBSurface(0, 1000, 1000, 32, 0, 0, 0, 0);
-	SDL_Surface *map_old = SDL_CreateRGBSurface(0, 1000, 1000, 32, 0, 0, 0, 0);
+	SDL_Surface *map = SDL_CreateRGBSurface(0, 5*MAP_SCALE_FACTOR, 5 * MAP_SCALE_FACTOR, 32, 0, 0, 0, 0);
+	SDL_Surface *map_old = SDL_CreateRGBSurface(0, 5 * MAP_SCALE_FACTOR, 5 * MAP_SCALE_FACTOR, 32, 0, 0, 0, 0);
+	SDL_Surface *map_big = SDL_CreateRGBSurface(0, 5 * SCALE_FACTOR, 5 * SCALE_FACTOR, 32, 0, 0, 0, 0);
 
 	SDL_Renderer *map_render = SDL_CreateSoftwareRenderer(map);
 
@@ -248,34 +251,47 @@ int main()
 
 	fstream log("output.log",fstream::out | fstream::app);
 
+	log << "START OF RUN" << endl;
+
 	while (running) {
 		auto start = chrono::high_resolution_clock::now();
-		while (chrono::duration<double,milli>(chrono::high_resolution_clock::now() - start).count() < 200){ // Run for 200ms
+		int old_i = i;
+		while (chrono::duration<double,milli>(chrono::high_resolution_clock::now() - start).count() < 200 && i <= 300 * 100){ // Run for 200ms
 			RoombaCommand command = bot.takeAction(ss);
-			apply_command(bot, command);
-			draw_on_map(map_render, bot);
+			// Thinking applies to 10 actions, thinking 10 times per second 
+			// and simulating physics 100 times per second. i is the number
+			// of physics ticks.
+			for (int j = 0; j < 10; ++j) {
+				apply_command(bot, command);
+				apply_physics(bot, r);
+				draw_on_map(map_render, bot);
+				++i;
+			}
 			long int reward = generate_reward(map);
 			ss = senseWorld(bot, r);
 			bot.learnFromResults(ss, reward);
-			applyPhysics(bot, r);
-			++i;
+			
 		}
-		cout << i << endl;
+		cout << (i - old_i)*5 << " iterations per second | i: " << i << endl;
 		if (i > 300 * 100) {// 1 epoch is five minutes, simulated
 			log << epoch++ << "," << generate_reward(map) << endl;
+			cout << "********EPOCH " << epoch << endl;
 			SDL_SetRenderDrawColor(map_render, 0, 0, 0, 0);
 			SDL_RenderClear(map_render);
 			r = generate_room(eng);
 			bot.loc = { 0.2f,0.2f };
 			bot.theta = 20.0f / 180 * PI;
-			bot.epsilon = bot.epsilon > 0.1 ? bot.epsilon - 0.01 : 0.1;
+			bot.epsilon = bot.epsilon > 0.1 ? bot.epsilon - 0.05 : 0.1;
 			i = 0;
 		}
 		SDL_SetRenderDrawColor(ren, 0, 0, 0, 0);
 		SDL_RenderClear(ren);
 		SDL_DestroyTexture(map_text);
-		map_text = SDL_CreateTextureFromSurface(ren, map);
+		SDL_BlitScaled(map, NULL, map_big, NULL);
+		map_text = SDL_CreateTextureFromSurface(ren, map_big);
+		//SDL_RenderSetScale(ren, 2, 2);
 		SDL_RenderCopy(ren, map_text, NULL, NULL);
+		//SDL_RenderSetScale(ren, 1, 1);
 		draw_room(ren,r);
 		draw_robot(ren,bot);
 		SDL_RenderPresent(ren);
